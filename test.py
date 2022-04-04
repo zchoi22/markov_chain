@@ -6,17 +6,20 @@ from markov2 import markov2
 
 def main():
     #m = markov(filename='harry_potter.txt')
-    m2 = markov2(memory=3)
+    m2 = markov2(filename='harry_potter.txt', memory=2)
 
     #lines = m.read_file('test.txt')
     #words = m.format_file(lines)
     #print(lines, '\n'+str(words))
 
     #m.create_markov()
-    print('done')
     m2.create_markov()
+    #print(m2.create_sentence('dying .', []))
     #print(m2.create_sentence('harry potter'))
-    print(m2.generate_markov(num_words=1000))
+    n = m2.generate_markov(num_words=10000)
+    save_file = open('m2.txt', 'w')
+    save_file.write(n)
+    save_file.close()
     # a = []
     # for i in range(1000000):
     #     a.append(m.next_word('to'))

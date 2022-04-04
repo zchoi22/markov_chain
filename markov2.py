@@ -12,8 +12,23 @@ class markov2:
         self.sentence_beginnings = []
 
         self.words = self.format_file(self.read_file(self.filename))
-        self.states = list(self.return_states(self.words))
+        self.states = list(self.generate_states(self.words))
         self.dict = {}
+
+    def generate_states(self, words):
+        return set(words)
+
+    def get_sentence_beginnings(self):
+        return self.sentence_beginnings
+
+    def get_states(self):
+        return self.states
+
+    def get_word(self, index):
+        return self.states[index]
+
+    def get_index(self, word):
+        return self.states.index(word)
 
     def read_file(self, filename):
         with open(filename) as f:
@@ -28,15 +43,12 @@ class markov2:
         words = [word.lower() for list in [re.findall(r"[\w']+|[.,!?;]", line) for line in lines] for word in list]
         return words
 
-    def return_states(self, words):
-        return set(words)
-
     def create_markov(self):
         for i in range(len(self.words)-self.memory-1):
             memory_set = [self.states.index(j) for j in self.words[i:i+self.memory+1]]
             key, value = tuple(memory_set[0:self.memory]), memory_set[-1]
 
-            if self.states[key[0]] in '.!?':
+            if self.states[key[0]] in '.!?' and not any(word in '.!?' for word in [self.get_word(index) for index in memory_set[1:self.memory+1]]):
                 self.sentence_beginnings.append(tuple(memory_set[1:self.memory+1]))
 
             if key not in self.dict.keys():
@@ -57,32 +69,35 @@ class markov2:
     def format_sentence(self, sentence):
         formatted = ''
         for i in range(len(sentence)):
-            if i == 0:
-                formatted += sentence[i][0].upper()+sentence[i][1:]
+            if sentence[i-1] in '.?!':
+                formatted += ' \n' + sentence[i][0].upper()+sentence[i][1:]
             elif str(sentence[i]) in string.punctuation:
                 formatted+=sentence[i]
             else:
                 formatted+=' '+sentence[i]
-        return formatted
+        return formatted[2:]
 
-    def create_sentence(self, word, sentence=[]):
+    def create_sentence(self, word, sentence):
         punctuation = '.?!'
         word = word.split(' ')
+        if word[-1] in punctuation and sentence != []:
+            sentence+=word
+            return sentence
         sentence.append(word[0])
-        if word[-1] in punctuation:
-            sentence.append(' '.join(word[1:]))
-            return self.format_sentence(sentence)
         return self.create_sentence(' '.join(word[1:]) + ' ' + self.next_word(' '.join(word)), sentence)
 
-    def generate_markov(self, num_words=1000):
-        keys = list(self.dict.keys())
-        #sentence_beginnings = [j for j in keys if self.states.index('.') in self.dict[j].keys()]
-        total = ''
+    def generate_markov(self, num_words=1000, total = []):
+        r = random.randint(0, len(self.sentence_beginnings)-1)
+        words = ' '.join([self.states[word] for word in self.sentence_beginnings[r]])
+        words = self.create_sentence(words, [])
+        total+=words
+
         while len(total) < num_words:
-            r = random.randint(0, len(self.sentence_beginnings)-1)
-            if self.states[self.sentence_beginnings[r][-1]] in string.punctuation:
-                pass
-            else:
-                words = ' '.join([self.states[word] for word in self.sentence_beginnings[r]])
-                total+=self.create_sentence(words, []) +'\n'
-        return total
+            words = ' '.join(total[-self.memory:])
+            try:
+                words = self.create_sentence(words, [])
+                total += words[self.memory:]
+            except KeyError:
+                return self.generate_markov(num_words, total)
+
+        return self.format_sentence(total)
